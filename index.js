@@ -9,7 +9,12 @@ const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors({
-    origin: ['http://localhost:5173','http://localhost:5174'],
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://car-doctor-beff6.firebaseapp.com',
+        'https://car-doctor-beff6.web.app'
+    ],
     credentials: true,
 }));
 app.use(express.json());
@@ -62,7 +67,7 @@ async function run() {
 
         app.post('/jwt', async (req, res) => {
             const user = req.body;
-            console.log(user);
+            //console.log(user);
             const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
 
             res.cookie('token', token, {
@@ -75,7 +80,7 @@ async function run() {
 
         app.post('/logout', async (req, res) => {
             const user = req.body;
-            console.log('logout user', user);
+            //console.log('logout user', user);
             res.clearCookie('token', {maxAge: 0}).send({ success: true });
         })
 
@@ -86,7 +91,19 @@ async function run() {
         const bookingCollection = client.db('carDoctor').collection('bookings');
 
         app.get('/services', async (req, res) => {
-            const cursor = serviceCollection.find();
+            const filter = req.query;
+            console.log(filter);
+            const query = {
+                price: { $lte: 200 },
+                title: {$regex: filter.search, $options: 'i'}
+            };
+            const options = {
+                sort: {
+                    price: filter.sort === 'asc' ? 1:-1
+                }
+            };
+    
+            const cursor = serviceCollection.find(query, options);
             const result = await cursor.toArray();
             res.send(result);
         })
@@ -110,7 +127,7 @@ async function run() {
             if (req.query.email !== req.user.email) {
                 return res.status(403).send({message : 'forbidden'})
             }
-            console.log('token user info', req.user);
+            //console.log('token user info', req.user);
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
@@ -121,7 +138,7 @@ async function run() {
 
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
-            console.log(booking);
+            //console.log(booking);
             const result = await bookingCollection.insertOne(booking);
             res.send(result);
         });
@@ -130,7 +147,7 @@ async function run() {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updatedBooking = req.body;
-            console.log(updatedBooking);
+            //console.log(updatedBooking);
             const updateDoc = {
                 $set: {
                     status: updatedBooking.status
